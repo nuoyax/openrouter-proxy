@@ -36,75 +36,94 @@ function sendJson(res, status, data) {
 }
 
 async function handleRequest(req, res) {
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, HTTP-Referer, X-OpenRouter-Title',
-    });
-    res.end();
-    return;
-  }
-
-  const pathname = req.url?.split('?')[0];
-  const isChat = pathname === '/api/v1/chat/completions' || pathname === '/v1/chat/completions';
-
-  if (req.method !== 'POST' || !isChat) {
-    sendJson(res, 404, { error: { message: '仅支持 POST /api/v1/chat/completions（或 /v1/chat/completions）' } });
-    return;
-  }
-
-  let body;
-  try {
-    body = await parseBody(req);
-  } catch (e) {
-    sendJson(res, 400, { error: { message: '无效的 JSON 请求体' } });
-    return;
-  }
-
-  const openRouterPath = pathname === '/v1/chat/completions' ? '/api/v1/chat/completions' : pathname;
-  let result;
-  try {
-    result = await forwardToOpenRouter(req, body, openRouterPath);
-  } catch (e) {
-    console.error(e);
-    sendJson(res, 502, { error: { message: '转发到 OpenRouter 失败: ' + (e.message || String(e)) } });
-    return;
-  }
-
-  if (result.stream) {
-    res.writeHead(result.status, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      ...result.headers,
-    });
-    const readable = Readable.fromWeb(result.stream);
-    readable.on('error', (err) => {
+  const replyError = (status, message) => {
+    try {
       if (!res.writableEnded) {
-        res.destroy(err);
+        sendJson(res, status, { error: { message } });
       }
-    });
-    res.on('error', () => readable.destroy());
-    readable.pipe(res);
-    return;
-  }
+    } catch (_) {}
+  };
 
-  if (result.json != null) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    sendJson(res, result.status, result.json);
-    return;
+  try {
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, HTTP-Referer, X-OpenRouter-Title',
+      });
+      res.end();
+      return;
+    }
+
+    const pathname = req.url?.split('?')[0];
+    const isChat = pathname === '/api/v1/chat/completions' || pathname === '/v1/chat/completions';
+
+    if (req.method !== 'POST' || !isChat) {
+      sendJson(res, 404, { error: { message: '仅支持 POST /api/v1/chat/completions（或 /v1/chat/completions）' } });
+      return;
+    }
+
+    let body;
+    try {
+      body = await parseBody(req);
+    } catch (e) {
+      replyError(400, '无效的 JSON 请求体');
+      return;
+    }
+
+    const openRouterPath = pathname === '/v1/chat/completions' ? '/api/v1/chat/completions' : pathname;
+    let result;
+    try {
+      result = await forwardToOpenRouter(req, body, openRouterPath);
+    } catch (e) {
+      console.error('[forwardToOpenRouter]', e);
+      replyError(502, '转发到 OpenRouter 失败: ' + (e?.message || String(e)));
+      return;
+    }
+
+    if (result.stream) {
+      res.writeHead(result.status, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        ...result.headers,
+      });
+      const readable = Readable.fromWeb(result.stream);
+      readable.on('error', (err) => {
+        if (!res.writableEnded) {
+          console.error('[stream]', err?.message || err);
+          res.destroy();
+        }
+      });
+      res.on('error', () => readable.destroy());
+      readable.pipe(res);
+      return;
+    }
+
+    if (result.json != null) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      sendJson(res, result.status, result.json);
+      return;
+    }
+    if (result.text != null) {
+      res.writeHead(result.status, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+      res.end(result.text);
+      return;
+    }
+    replyError(502, '未知响应');
+  } catch (e) {
+    console.error('[handleRequest]', e);
+    replyError(502, e?.message || String(e));
   }
-  if (result.text != null) {
-    res.writeHead(result.status, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
-    res.end(result.text);
-    return;
-  }
-  sendJson(res, 502, { error: { message: '未知响应' } });
 }
 
 const server = http.createServer(handleRequest);
+
+server.on('error', (err) => {
+  console.error('[server]', err?.message || err);
+});
+
 server.listen(config.port, async () => {
   console.log(`OpenRouter 中转已启动: http://0.0.0.0:${config.port}`);
   console.log(`  - 指定模型: 请求体 model 填具体模型 ID（如 openrouter/free）`);
@@ -116,4 +135,12 @@ server.listen(config.port, async () => {
       console.log(`  - 已从 OpenRouter 拉取免费模型列表，共 ${list?.length ?? 0} 个（1 小时缓存）`);
     }).catch(() => {});
   }
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err?.message || err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
 });

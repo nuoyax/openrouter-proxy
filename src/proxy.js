@@ -71,7 +71,12 @@ export async function forwardToOpenRouter(req, body, pathname) {
   }
 
   const isAuto = body?.model === config.autoModelId;
-  const freeModelsList = isAuto ? await getFreeModels() : config.freeModels;
+  let freeModelsList;
+  try {
+    freeModelsList = isAuto ? await getFreeModels() : config.freeModels;
+  } catch (e) {
+    freeModelsList = config.freeModels;
+  }
   const excluded = new Set();
   const opts = await getFetchOpts();
   const headers = {
@@ -101,7 +106,8 @@ export async function forwardToOpenRouter(req, body, pathname) {
         if (isAuto && list.length > 1) continue;
         return { status: 504, json: { error: { message: `模型响应超时（${config.modelTimeoutMs}ms），可重试或更换模型` } } };
       }
-      throw err;
+      const msg = err?.message || String(err);
+      return { status: 502, json: { error: { message: `请求失败: ${msg}` } } };
     }
 
     const latencyMs = Date.now() - start;
@@ -116,7 +122,12 @@ export async function forwardToOpenRouter(req, body, pathname) {
       return { status: res.status, stream: res.body, headers: Object.fromEntries(res.headers) };
     }
 
-    const text = await res.text();
+    let text;
+    try {
+      text = await res.text();
+    } catch (e) {
+      return { status: 502, json: { error: { message: '读取响应失败: ' + (e?.message || String(e)) } } };
+    }
     let json;
     try {
       json = text ? JSON.parse(text) : {};
