@@ -3,6 +3,7 @@
  * - 国内机器部署，转发到 OpenRouter，可配置 HTTP 代理访问 OpenRouter
  * - 支持指定模型，或使用 openrouter/auto 按响应速度自动在免费模型间切换
  */
+import 'dotenv/config';
 import http from 'node:http';
 import { Readable } from 'node:stream';
 import { config } from './config.js';
