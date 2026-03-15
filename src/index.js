@@ -128,6 +128,9 @@ server.listen(config.port, async () => {
   console.log(`OpenRouter 中转已启动: http://0.0.0.0:${config.port}`);
   console.log(`  - 指定模型: 请求体 model 填具体模型 ID（如 openrouter/free）`);
   console.log(`  - 自动按速度切换: 请求体 model 填 ${config.autoModelId}`);
+  if (config.httpProxy) {
+    console.log('  使用代理:', config.httpProxy, '（超时默认 10s，可设置 MODEL_TIMEOUT_MS 覆盖）');
+  }
   if (!config.openrouterApiKey) {
     console.warn('  未设置 OPENROUTER_API_KEY，请求将返回 401');
   } else if (!process.env.OPENROUTER_FREE_MODELS && process.env.FETCH_FREE_MODELS_FROM_OPENROUTER !== 'false') {

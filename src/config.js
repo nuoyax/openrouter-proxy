@@ -33,7 +33,12 @@ export const config = {
   /** 是否启用延迟统计（用于自动选最快模型） */
   enableLatencyTracking: process.env.ENABLE_LATENCY_TRACKING !== 'false',
   /** 代理请求到 OpenRouter 时使用的 HTTP(S) 代理，例如 http://127.0.0.1:7890 */
-  httpProxy: process.env.HTTP_PROXY || process.env.http_proxy || '',
-  /** 单模型最大响应时间（毫秒），超时则自动切换模型重试，默认 1000 */
-  modelTimeoutMs: Number(process.env.MODEL_TIMEOUT_MS) || 1000,
+  httpProxy: (() => {
+    const raw = process.env.HTTP_PROXY || process.env.http_proxy || '';
+    if (!raw.trim()) return '';
+    const s = raw.trim();
+    return s.startsWith('http://') || s.startsWith('https://') ? s : `http://${s}`;
+  })(),
+  /** 单模型最大响应时间（毫秒），超时则自动切换模型重试；走代理时默认 10s，否则 1s */
+  modelTimeoutMs: Number(process.env.MODEL_TIMEOUT_MS) || ((process.env.HTTP_PROXY || process.env.http_proxy) ? 10000 : 1000),
 };

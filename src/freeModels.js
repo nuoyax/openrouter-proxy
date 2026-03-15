@@ -25,18 +25,20 @@ export async function fetchOpenRouterFreeModels() {
   const apiKey = config.openrouterApiKey;
   if (!apiKey) return null;
 
-  let opts = {};
+  let fetchFn = globalThis.fetch;
+  let dispatcher;
   if (config.httpProxy) {
     try {
-      const { ProxyAgent } = await import('undici');
-      opts.dispatcher = new ProxyAgent(config.httpProxy);
+      const undici = await import('undici');
+      dispatcher = new undici.ProxyAgent(config.httpProxy);
+      fetchFn = undici.fetch;
     } catch (_) {}
   }
 
-  const res = await fetch(url, {
+  const res = await fetchFn(url, {
     method: 'GET',
     headers: { 'Authorization': `Bearer ${apiKey}` },
-    ...opts,
+    dispatcher,
   });
   if (!res.ok) return null;
 

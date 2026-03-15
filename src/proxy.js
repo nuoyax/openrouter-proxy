@@ -8,13 +8,15 @@ import { getFreeModels } from './freeModels.js';
 const latencyTracker = config.enableLatencyTracking ? createLatencyTracker() : null;
 
 async function getFetchOptions() {
-  const opts = {};
+  const opts = { fetch: globalThis.fetch };
   if (config.httpProxy) {
     try {
-      const { ProxyAgent } = await import('undici');
-      opts.dispatcher = new ProxyAgent(config.httpProxy);
+      const undici = await import('undici');
+      const agent = new undici.ProxyAgent(config.httpProxy);
+      opts.dispatcher = agent;
+      opts.fetch = undici.fetch;
     } catch (e) {
-      console.warn('未安装 undici，HTTP_PROXY 将被忽略。可执行: npm install undici');
+      console.warn('未安装 undici，HTTP_PROXY 将被忽略。请执行: npm install undici');
     }
   }
   return opts;
@@ -43,15 +45,17 @@ const TIMEOUT_LATENCY_MS = 60000; // 超时记为 60s，便于自动切换时避
 
 /**
  * 单次请求（带超时），超时抛出 DOMException AbortError
+ * 当配置了代理时使用 undici.fetch + dispatcher，确保走代理
  */
 async function fetchWithTimeout(url, resolved, headers, opts) {
   const signal = AbortSignal.timeout(config.modelTimeoutMs);
-  const res = await fetch(url, {
+  const doFetch = opts.fetch || globalThis.fetch;
+  const res = await doFetch(url, {
     method: 'POST',
     headers,
     body: JSON.stringify(resolved),
     signal,
-    ...opts,
+    dispatcher: opts.dispatcher,
   });
   return res;
 }
