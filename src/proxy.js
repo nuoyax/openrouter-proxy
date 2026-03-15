@@ -64,7 +64,22 @@ async function fetchWithTimeout(url, resolved, headers, opts) {
  * 转发到 OpenRouter 的 POST /api/v1/chat/completions（及同路径流式）
  * 自动模式下单模型超时（默认 1s）会切换下一个模型重试
  */
+/**
+ * OpenClaw 等客户端用 models.providers 自定义 provider 时，请求体里 model 可能带前缀（如 orproxy/openrouter/auto）。
+ * 统一规范为 openrouter/xxx，便于后续按 auto/指定模型逻辑处理。
+ */
+function normalizeModel(body) {
+  const m = body?.model;
+  if (typeof m !== 'string' || !m.includes('/')) return body;
+  const afterFirst = m.slice(m.indexOf('/') + 1);
+  if (afterFirst.startsWith('openrouter/')) {
+    return { ...body, model: afterFirst };
+  }
+  return body;
+}
+
 export async function forwardToOpenRouter(req, body, pathname) {
+  body = normalizeModel(body);
   const base = config.openrouterBase.replace(/\/$/, '');
   const path = pathname || '/api/v1/chat/completions';
   const url = `${base}${path}`;

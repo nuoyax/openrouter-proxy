@@ -100,58 +100,124 @@ curl -X POST http://localhost:10300/api/v1/chat/completions \
 
 ## 🐾 OpenClaw 接入教程
 
-本中转与 OpenRouter 接口兼容，OpenClaw 只需把请求的 **Base URL** 指到本服务即可。
+本中转提供两种用法，与 OpenClaw 的配置一一对应，保证行为一致：
 
-#### 前置条件
+| 本中转能力 | 请求体 `model` 值 | OpenClaw 中 `primary` 填法（provider 名为 `orproxy` 时） |
+|------------|-------------------|----------------------------------------------------------|
+| **切换模型**（按延迟自动选免费模型，超时换下一个） | `openrouter/auto` | `orproxy/openrouter/auto` |
+| **指定模型**（固定用某个模型，原样转发） | `openrouter/free` 或任意 OpenRouter 模型 ID | `orproxy/openrouter/free`、`orproxy/stepfun/step-3.5-flash:free` 等 |
 
-- 本中转服务已启动（如 `http://localhost:10300`）。
-- 已在本中转的 `.env` 中配置 `OPENROUTER_API_KEY`（OpenClaw 侧可填占位，由中转统一带 Key）。
+OpenClaw 发 **POST** 到 chat completions；本中转提供 `POST /v1/chat/completions` 与 `POST /api/v1/chat/completions`，只需让 OpenClaw 的请求发到本中转即可。
 
-#### 步骤一：认证 OpenClaw（可选）
+### 配置步骤（推荐：`models.providers`）
 
-若 OpenClaw 要求配置 token，可先执行（Key 可占位）：
+1. 本中转已启动（如 `http://localhost:10300`），且 `.env` 里已配置 `OPENROUTER_API_KEY`。
+2. 在 `openclaw.json` 里增加自定义 provider（下面示例里名为 `orproxy`），`baseUrl` 指到本中转；在 `models` 里列出要用到的模型 **id**，与上表一致。
+3. `agents.defaults.model.primary` 按上表二选一：要**切换模型**就填 `orproxy/openrouter/auto`，要**指定模型**就填 `orproxy/openrouter/free` 等。
+
+### 示例一：切换模型（自动选最快免费模型）
+
+```json5
+{
+  "env": { "OPENROUTER_API_KEY": "sk-placeholder" },
+  "agents": {
+    "defaults": {
+      "model": { "primary": "orproxy/openrouter/auto" }
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "orproxy": {
+        "baseUrl": "http://localhost:10300",
+        "apiKey": "sk-placeholder",
+        "api": "openai-completions",
+        "models": [
+          { "id": "openrouter/auto", "name": "自动切换（按延迟）" }
+        ]
+      }
+    }
+  }
+}
+```
+
+### 示例二：指定模型（固定用某个模型）
+
+```json5
+{
+  "env": { "OPENROUTER_API_KEY": "sk-placeholder" },
+  "agents": {
+    "defaults": {
+      "model": { "primary": "orproxy/openrouter/free" }
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "orproxy": {
+        "baseUrl": "http://localhost:10300",
+        "apiKey": "sk-placeholder",
+        "api": "openai-completions",
+        "models": [
+          { "id": "openrouter/free", "name": "OpenRouter 免费" },
+          { "id": "stepfun/step-3.5-flash:free", "name": "Step 3.5 Flash" }
+        ]
+      }
+    }
+  }
+}
+```
+
+要换指定模型时，把 `primary` 改成 `orproxy/<模型id>`，且该 `<模型id>` 需出现在上面 `models` 数组里（如 `orproxy/stepfun/step-3.5-flash:free`）。
+
+### 示例三：同时可用「切换」与「指定」（按需改 primary）
+
+```json5
+{
+  "env": { "OPENROUTER_API_KEY": "sk-placeholder" },
+  "agents": {
+    "defaults": {
+      "model": { "primary": "orproxy/openrouter/auto" }
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "orproxy": {
+        "baseUrl": "http://localhost:10300",
+        "apiKey": "sk-placeholder",
+        "api": "openai-completions",
+        "models": [
+          { "id": "openrouter/auto", "name": "自动切换" },
+          { "id": "openrouter/free", "name": "免费" },
+          { "id": "stepfun/step-3.5-flash:free", "name": "Step 3.5 Flash" }
+        ]
+      }
+    }
+  }
+}
+```
+
+- 用**切换模型**：`primary` 保持 `orproxy/openrouter/auto`。
+- 用**指定模型**：把 `primary` 改为 `orproxy/openrouter/free` 或 `orproxy/stepfun/step-3.5-flash:free` 等，与上面 `id` 一致即可。
+
+### 说明
+
+- **provider 名**：示例里用 `orproxy`，可改成任意名（如 `myopenrouter`），对应关系改为 `myopenrouter/openrouter/auto`、`myopenrouter/openrouter/free` 等。
+- **baseUrl**：远程或 HTTPS 时改为 `http://<服务器>:10300` 或 `https://<域名>`。
+- 本中转会把请求体里带 provider 前缀的 `model`（如 `orproxy/openrouter/auto`）规范成 `openrouter/auto` 再转发，因此上表对应关系保证无误。
+
+### 认证（可选）
+
+若 OpenClaw 要求先做 token 认证，可执行（Key 可占位）：
 
 ```bash
 openclaw onboard --auth-choice apiKey --token-provider openrouter --token "sk-placeholder"
 ```
 
-#### 步骤二：配置指向本中转
+### 代理环境
 
-在 OpenClaw 配置（如 `openclaw.json`）中：
-
-1. **Base URL** 设为本中转地址（必改）  
-   - 本机：`http://localhost:10300`  
-   - 远程：`http://<服务器 IP 或域名>:10300`  
-   - 有反向代理 HTTPS：`https://<域名>`
-2. **模型** 二选一：  
-   - 自动切换：`openrouter/auto`  
-   - 指定模型：`openrouter/free`、`stepfun/step-3.5-flash:free` 等
-
-配置示例：
-
-```json
-{
-  "env": { "OPENROUTER_API_KEY": "sk-placeholder" },
-  "agents": {
-    "defaults": { "model": { "primary": "openrouter/auto" } }
-  }
-}
-```
-
-若支持单独设置 **API Base URL**，设为 `http://<本机或服务器>:10300`，不要用 `https://openrouter.ai`。
-
-#### 步骤三：代理环境
-
-本机无法直连 OpenRouter 时，在本中转 `.env` 中配置 **可选** 的 `HTTP_PROXY`（如 `http://127.0.0.1:7890`），由中转经代理访问；OpenClaw 只需访问本中转，无需自建代理。
-
-#### 小结
-
-| 项目 | 说明 |
-|------|------|
-| Base URL | 本中转地址，如 `http://localhost:10300` |
-| API Key | OpenClaw 侧可占位；实际 Key 在中转 `.env` |
-| 自动切换 | 模型填 `openrouter/auto` |
-| 指定模型 | 模型填 `openrouter/free` 等具体 ID |
+本机无法直连 OpenRouter 时，在本中转 `.env` 中配置 **可选** 的 `HTTP_PROXY`；OpenClaw 只需能访问本中转即可。
 
 ---
 
