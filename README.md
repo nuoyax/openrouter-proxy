@@ -71,13 +71,64 @@ curl -X POST http://localhost:10300/api/v1/chat/completions \
 
 代理会从 `OPENROUTER_FREE_MODELS`（或内置免费模型列表）中，根据近期延迟选择当前最快的模型；无历史数据时使用列表第一个。
 
-### 3. 在 OpenClaw 中使用
+### 3. OpenClaw 接入教程
 
-将 OpenClaw 请求的 base URL 指向本中转服务（API Key 仅在中转服务端配置，客户端无需持有）：
+本中转与 OpenRouter 接口兼容，OpenClaw 只需把请求的 base URL 指到本服务即可。
 
-- Base URL：`http://<本机或服务器>:10300`（若经反向代理可改为 `https://...`）。
-- 指定模型：在 OpenClaw 中填写具体模型 ID。
-- 自动切换：模型填 `openrouter/auto`（或你设置的 `AUTO_MODEL_ID`）。
+#### 前置条件
+
+- 本中转服务已在本机或服务器启动（如 `http://localhost:10300`）。
+- 已在本中转的 `.env` 中配置 `OPENROUTER_API_KEY`（OpenClaw 侧可不填或填占位，由中转统一带 Key）。
+
+#### 步骤一：认证 OpenClaw（可选）
+
+若 OpenClaw 要求配置 token，可先做一次认证（Key 可填占位，实际请求由中转带 Key）：
+
+```bash
+openclaw onboard --auth-choice apiKey --token-provider openrouter --token "sk-placeholder"
+```
+
+#### 步骤二：配置指向本中转
+
+在 OpenClaw 的配置（如 `openclaw.json` 或对应环境变量）中：
+
+1. **Base URL** 设为本中转地址（必改）  
+   - 本机：`http://localhost:10300`  
+   - 远程：`http://<服务器 IP 或域名>:10300`  
+   - 若前面有 Nginx/Caddy 反向代理 HTTPS：`https://<域名>`
+2. **模型** 任选其一：  
+   - 自动按速度切换：填 `openrouter/auto`  
+   - 指定模型：填具体 ID，如 `openrouter/free`、`stepfun/step-3.5-flash:free`
+
+配置示例（按你实际使用的配置方式调整）：
+
+```json
+{
+  "env": {
+    "OPENROUTER_API_KEY": "sk-placeholder"
+  },
+  "agents": {
+    "defaults": {
+      "model": { "primary": "openrouter/auto" }
+    }
+  }
+}
+```
+
+若 OpenClaw 支持单独设置 **API Base URL**，将其设为 `http://<本机或服务器>:10300`，不要用 `https://openrouter.ai`。
+
+#### 步骤三：国内 / 代理环境
+
+- 本中转部署在国内且无法直连 OpenRouter 时，在本中转的 `.env` 中配置 **可选**的 `HTTP_PROXY`（如 `http://127.0.0.1:7890`），由中转经代理访问 OpenRouter；OpenClaw 只需访问本中转，无需自己配代理。
+
+#### 小结
+
+| 项目     | 说明 |
+|----------|------|
+| Base URL | 本中转地址，如 `http://localhost:10300` |
+| API Key  | OpenClaw 侧可占位；实际 Key 在中转 `.env` |
+| 自动切换 | 模型填 `openrouter/auto` |
+| 指定模型 | 模型填 `openrouter/free` 等具体 ID |
 
 ## 接口说明
 
