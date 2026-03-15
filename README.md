@@ -8,9 +8,16 @@
 [![OpenRouter](https://img.shields.io/badge/OpenRouter-API-1a1a2e?logo=openai&logoColor=white)](https://openrouter.ai/)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-兼容-0066cc)](https://open-claw.bot/)
 
-**国内可用 · OpenClaw 即接即用**
+**让 OpenClaw 与各类客户端稳定使用 OpenRouter 免费模型**
 
-通过本服务中转访问 OpenRouter，使用免费模型。支持 **指定模型** 或 **按响应速度自动切换** 模型。
+[OpenRouter](https://openrouter.ai/) 提供统一 API 与大量免费模型，但直连有时不稳定或受网络限制；OpenClaw、各类 SDK 又通常只认一个 Base URL。本仓库是一个 **轻量级中转服务**：部署在你本机或服务器后，所有请求先到中转，再由中转（可选经 HTTP 代理）访问 OpenRouter，对你现有的客户端来说只是换了一个 Base URL。
+
+- **指定模型**：请求里写具体模型 ID（如 `openrouter/free`），原样转发。  
+- **按速度自动切换**：写 `openrouter/auto`，中转会从免费模型里按近期延迟自动选最快的，单模型超时则换下一个。  
+- **支持代理**：可配置 `HTTP_PROXY`，由中转统一走代理，客户端无需改代码。  
+- **即插即用**：与 OpenRouter 接口兼容，OpenClaw、OpenAI SDK、curl 等把 Base URL 指到本服务即可。
+
+适合在本机或内网跑 OpenClaw / 自建应用，想用 OpenRouter 免费模型、又希望稳定可用的场景。
 
 [功能](#-功能) · [快速开始](#-快速开始) · [配置](#-配置) · [OpenClaw 接入](#-openclaw-接入教程) · [接口](#-接口说明)
 
@@ -133,9 +140,9 @@ openclaw onboard --auth-choice apiKey --token-provider openrouter --token "sk-pl
 
 若支持单独设置 **API Base URL**，设为 `http://<本机或服务器>:10300`，不要用 `https://openrouter.ai`。
 
-#### 步骤三：国内 / 代理环境
+#### 步骤三：代理环境
 
-本中转在国内且无法直连 OpenRouter 时，在本中转 `.env` 中配置 **可选** 的 `HTTP_PROXY`（如 `http://127.0.0.1:7890`），由中转经代理访问；OpenClaw 只需访问本中转，无需自建代理。
+本机无法直连 OpenRouter 时，在本中转 `.env` 中配置 **可选** 的 `HTTP_PROXY`（如 `http://127.0.0.1:7890`），由中转经代理访问；OpenClaw 只需访问本中转，无需自建代理。
 
 #### 小结
 

@@ -1,7 +1,7 @@
 {
   "name": "openrouter-proxy",
   "version": "1.0.0",
-  "description": "OpenRouter 中转代理，支持国内机器使用免费模型，可按响应速度自动切换或指定模型",
+  "description": "OpenRouter 中转代理，支持本机/服务器使用免费模型，可按响应速度自动切换或指定模型",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
