@@ -80,7 +80,14 @@ async function handleRequest(req, res) {
       'Access-Control-Allow-Origin': '*',
       ...result.headers,
     });
-    Readable.fromWeb(result.stream).pipe(res);
+    const readable = Readable.fromWeb(result.stream);
+    readable.on('error', (err) => {
+      if (!res.writableEnded) {
+        res.destroy(err);
+      }
+    });
+    res.on('error', () => readable.destroy());
+    readable.pipe(res);
     return;
   }
 
