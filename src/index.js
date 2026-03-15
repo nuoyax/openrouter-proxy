@@ -8,6 +8,7 @@ import http from 'node:http';
 import { Readable } from 'node:stream';
 import { config } from './config.js';
 import { forwardToOpenRouter } from './proxy.js';
+import { getFreeModels } from './freeModels.js';
 
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -97,11 +98,15 @@ async function handleRequest(req, res) {
 }
 
 const server = http.createServer(handleRequest);
-server.listen(config.port, () => {
+server.listen(config.port, async () => {
   console.log(`OpenRouter 中转已启动: http://0.0.0.0:${config.port}`);
   console.log(`  - 指定模型: 请求体 model 填具体模型 ID（如 openrouter/free）`);
   console.log(`  - 自动按速度切换: 请求体 model 填 ${config.autoModelId}`);
   if (!config.openrouterApiKey) {
     console.warn('  未设置 OPENROUTER_API_KEY，请求将返回 401');
+  } else if (!process.env.OPENROUTER_FREE_MODELS && process.env.FETCH_FREE_MODELS_FROM_OPENROUTER !== 'false') {
+    getFreeModels().then((list) => {
+      console.log(`  - 已从 OpenRouter 拉取免费模型列表，共 ${list?.length ?? 0} 个（1 小时缓存）`);
+    }).catch(() => {});
   }
 });

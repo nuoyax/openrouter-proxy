@@ -3,6 +3,7 @@
  */
 import { config } from './config.js';
 import { createLatencyTracker } from './latency.js';
+import { getFreeModels } from './freeModels.js';
 
 const latencyTracker = config.enableLatencyTracking ? createLatencyTracker() : null;
 
@@ -27,12 +28,12 @@ async function getFetchOpts() {
 }
 
 /**
- * 若请求体里是“自动模型”，则从免费模型里按延迟选一个并改写 body；可排除已超时的模型
+ * 若请求体里是“自动模型”，则从免费模型列表里按延迟选一个并改写 body；可排除已超时的模型
  */
-function resolveModel(body, autoModelId, exclude = new Set()) {
+function resolveModel(body, autoModelId, freeModelsList, exclude = new Set()) {
   const model = body?.model;
   if (model !== autoModelId) return body;
-  const list = config.freeModels;
+  const list = freeModelsList ?? config.freeModels;
   if (!list.length) return { ...body, model: 'openrouter/free' };
   const chosen = latencyTracker?.pickFastest(list, exclude) ?? list.find((m) => !exclude.has(m)) ?? list[0];
   return { ...body, model: chosen };
@@ -70,6 +71,7 @@ export async function forwardToOpenRouter(req, body, pathname) {
   }
 
   const isAuto = body?.model === config.autoModelId;
+  const freeModelsList = isAuto ? await getFreeModels() : config.freeModels;
   const excluded = new Set();
   const opts = await getFetchOpts();
   const headers = {
@@ -80,8 +82,8 @@ export async function forwardToOpenRouter(req, body, pathname) {
   };
 
   for (;;) {
-    const resolved = resolveModel(body, config.autoModelId, excluded);
-    const list = config.freeModels.filter((m) => !excluded.has(m));
+    const resolved = resolveModel(body, config.autoModelId, freeModelsList, excluded);
+    const list = freeModelsList.filter((m) => !excluded.has(m));
     if (isAuto && list.length === 0) {
       return { status: 504, json: { error: { message: '所有模型均超时，请稍后重试' } } };
     }
