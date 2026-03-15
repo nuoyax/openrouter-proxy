@@ -21,7 +21,7 @@
 | 变量 | 说明 |
 |------|------|
 | `OPENROUTER_API_KEY` | **必填**。在 [OpenRouter Keys](https://openrouter.ai/keys) 申请。 |
-| `PORT` | 监听端口，默认 `3000`。 |
+| `PORT` | 监听端口，默认 `10300`。 |
 | `HTTP_PROXY` | 可选。访问 OpenRouter 时使用的 HTTP 代理，如 `http://127.0.0.1:7890`。使用时代码会尝试用 `undici` 的 `ProxyAgent`。 |
 | `AUTO_MODEL_ID` | “自动按速度切换”时请求里使用的模型名，默认 `openrouter/auto`。 |
 | `OPENROUTER_FREE_MODELS` | 参与自动切换的免费模型 ID，逗号分隔。不填则使用内置列表。 |
@@ -46,7 +46,7 @@ npm run dev
 ### 1. 指定模型（直接转发）
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/chat/completions \
+curl -X POST http://localhost:10300/api/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "openrouter/free",
@@ -57,7 +57,7 @@ curl -X POST http://localhost:3000/api/v1/chat/completions \
 ### 2. 按速度自动切换模型
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/chat/completions \
+curl -X POST http://localhost:10300/api/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "openrouter/auto",
@@ -71,7 +71,7 @@ curl -X POST http://localhost:3000/api/v1/chat/completions \
 
 将 OpenClaw 请求的 base URL 指向本中转服务（API Key 仅在中转服务端配置，客户端无需持有）：
 
-- Base URL：`http://<本机或服务器>:3000`（若经反向代理可改为 `https://...`）。
+- Base URL：`http://<本机或服务器>:10300`（若经反向代理可改为 `https://...`）。
 - 指定模型：在 OpenClaw 中填写具体模型 ID。
 - 自动切换：模型填 `openrouter/auto`（或你设置的 `AUTO_MODEL_ID`）。
 

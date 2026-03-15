@@ -23,7 +23,7 @@ function parseEnvList(key, fallback) {
 }
 
 export const config = {
-  port: Number(process.env.PORT) || 3000,
+  port: Number(process.env.PORT) || 10300,
   openrouterApiKey: process.env.OPENROUTER_API_KEY || '',
   openrouterBase: process.env.OPENROUTER_BASE || OPENROUTER_BASE,
   /** 自动模式使用的免费模型列表，按优先级/速度会调整顺序 */
