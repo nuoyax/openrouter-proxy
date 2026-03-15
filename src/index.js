@@ -1,5 +1,5 @@
 /**
- * OpenRouter 中转代理
+ * OpenRouter 代理服务
  * - 本机或服务器部署，转发到 OpenRouter，可配置 HTTP 代理访问 OpenRouter
  * - 支持指定模型，或使用 openrouter/auto 按响应速度自动在免费模型间切换
  */
@@ -125,7 +125,7 @@ server.on('error', (err) => {
 });
 
 server.listen(config.port, async () => {
-  console.log(`OpenRouter 中转已启动: http://0.0.0.0:${config.port}`);
+  console.log(`OpenRouter 代理服务已启动: http://0.0.0.0:${config.port}`);
   console.log(`  - 指定模型: 请求体 model 填具体模型 ID（如 openrouter/free）`);
   console.log(`  - 自动按速度切换: 请求体 model 填 ${config.autoModelId}`);
   if (config.httpProxy) {

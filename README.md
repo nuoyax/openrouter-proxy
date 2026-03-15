@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔀 OpenRouter 中转代理
+# 🔀 OpenRouter 代理服务
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![npm](https://img.shields.io/badge/npm-1.0.0-CB3837?logo=npm&logoColor=white)](./package.json)
@@ -10,11 +10,11 @@
 
 **让 OpenClaw 与各类客户端稳定使用 OpenRouter 免费模型**
 
-[OpenRouter](https://openrouter.ai/) 提供统一 API 与大量免费模型，但直连有时不稳定或受网络限制；OpenClaw、各类 SDK 又通常只认一个 Base URL。本仓库是一个 **轻量级中转服务**：部署在你本机或服务器后，所有请求先到中转，再由中转（可选经 HTTP 代理）访问 OpenRouter，对你现有的客户端来说只是换了一个 Base URL。
+[OpenRouter](https://openrouter.ai/) 提供统一 API 与大量免费模型，但直连有时不稳定或受网络限制；OpenClaw、各类 SDK 又通常只认一个 Base URL。本仓库是一个 **轻量级代理服务**：部署在你本机或服务器后，所有请求先到本服务，再由本服务（可选经 HTTP 代理）访问 OpenRouter，对你现有的客户端来说只是换了一个 Base URL。
 
 - **指定模型**：请求里写具体模型 ID（如 `openrouter/free`），原样转发。  
-- **按速度自动切换**：写 `openrouter/auto`，中转会从免费模型里按近期延迟自动选最快的，单模型超时则换下一个。  
-- **支持代理**：可配置 `HTTP_PROXY`，由中转统一走代理，客户端无需改代码。  
+- **按速度自动切换**：写 `openrouter/auto`，本服务会从免费模型里按近期延迟自动选最快的，单模型超时则换下一个。  
+- **支持代理**：可配置 `HTTP_PROXY`，由本服务统一走代理，客户端无需改代码。  
 - **即插即用**：与 OpenRouter 接口兼容，OpenClaw、OpenAI SDK、curl 等把 Base URL 指到本服务即可。
 
 适合在本机或内网跑 OpenClaw / 自建应用，想用 OpenRouter 免费模型、又希望稳定可用的场景。
@@ -100,19 +100,19 @@ curl -X POST http://localhost:10300/api/v1/chat/completions \
 
 ## 🐾 OpenClaw 接入教程
 
-本中转提供两种用法，与 OpenClaw 的配置一一对应，保证行为一致：
+本服务提供两种用法，与 OpenClaw 的配置一一对应，保证行为一致：
 
-| 本中转能力 | 请求体 `model` 值 | OpenClaw 中 `primary` 填法（provider 名为 `orproxy` 时） |
+| 本服务能力 | 请求体 `model` 值 | OpenClaw 中 `primary` 填法（provider 名为 `orproxy` 时） |
 |------------|-------------------|----------------------------------------------------------|
 | **切换模型**（按延迟自动选免费模型，超时换下一个） | `openrouter/auto` | `orproxy/openrouter/auto` |
 | **指定模型**（固定用某个模型，原样转发） | `openrouter/free` 或任意 OpenRouter 模型 ID | `orproxy/openrouter/free`、`orproxy/stepfun/step-3.5-flash:free` 等 |
 
-OpenClaw 发 **POST** 到 chat completions；本中转提供 `POST /v1/chat/completions` 与 `POST /api/v1/chat/completions`，只需让 OpenClaw 的请求发到本中转即可。
+OpenClaw 发 **POST** 到 chat completions；本服务提供 `POST /v1/chat/completions` 与 `POST /api/v1/chat/completions`，只需让 OpenClaw 的请求发到本服务即可。
 
 ### 配置步骤（推荐：`models.providers`）
 
-1. 本中转已启动（如 `http://localhost:10300`），且 `.env` 里已配置 `OPENROUTER_API_KEY`。
-2. 在 `openclaw.json` 里增加自定义 provider（下面示例里名为 `orproxy`），`baseUrl` 指到本中转；在 `models` 里列出要用到的模型 **id**，与上表一致。
+1. 本服务已启动（如 `http://localhost:10300`），且 `.env` 里已配置 `OPENROUTER_API_KEY`。
+2. 在 `openclaw.json` 里增加自定义 provider（下面示例里名为 `orproxy`），`baseUrl` 指到本服务；在 `models` 里列出要用到的模型 **id**，与上表一致。
 3. `agents.defaults.model.primary` 按上表二选一：要**切换模型**就填 `orproxy/openrouter/auto`，要**指定模型**就填 `orproxy/openrouter/free` 等。
 
 ### 示例一：切换模型（自动选最快免费模型）
@@ -205,7 +205,7 @@ OpenClaw 发 **POST** 到 chat completions；本中转提供 `POST /v1/chat/comp
 
 - **provider 名**：示例里用 `orproxy`，可改成任意名（如 `myopenrouter`），对应关系改为 `myopenrouter/openrouter/auto`、`myopenrouter/openrouter/free` 等。
 - **baseUrl**：远程或 HTTPS 时改为 `http://<服务器>:10300` 或 `https://<域名>`。
-- 本中转会把请求体里带 provider 前缀的 `model`（如 `orproxy/openrouter/auto`）规范成 `openrouter/auto` 再转发，因此上表对应关系保证无误。
+- 本服务会把请求体里带 provider 前缀的 `model`（如 `orproxy/openrouter/auto`）规范成 `openrouter/auto` 再转发，因此上表对应关系保证无误。
 
 ### 认证（可选）
 
@@ -217,7 +217,7 @@ openclaw onboard --auth-choice apiKey --token-provider openrouter --token "sk-pl
 
 ### 代理环境
 
-本机无法直连 OpenRouter 时，在本中转 `.env` 中配置 **可选** 的 `HTTP_PROXY`；OpenClaw 只需能访问本中转即可。
+本机无法直连 OpenRouter 时，在本服务所在机器的 `.env` 中配置 **可选** 的 `HTTP_PROXY`；OpenClaw 只需能访问本服务即可。
 
 ---
 
