@@ -2,6 +2,12 @@
 
 # 🔀 OpenRouter 中转代理
 
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![npm](https://img.shields.io/badge/npm-1.0.0-CB3837?logo=npm&logoColor=white)](./package.json)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![OpenRouter](https://img.shields.io/badge/OpenRouter-API-1a1a2e?logo=openai&logoColor=white)](https://openrouter.ai/)
+[![OpenClaw](https://img.shields.io/badge/OpenClaw-兼容-0066cc)](https://open-claw.bot/)
+
 **国内可用 · OpenClaw 即接即用**
 
 通过本服务中转访问 OpenRouter，使用免费模型。支持 **指定模型** 或 **按响应速度自动切换** 模型。
