@@ -1,0 +1,12 @@
+# 依赖
+node_modules/
+
+# 本地环境与密钥（切勿提交）
+.env
+.env.local
+.env.*.local
+
+# 日志与临时
+*.log
+.DS_Store
+Thumbs.db
