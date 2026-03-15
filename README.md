@@ -30,7 +30,7 @@
 ## 安装与运行
 
 ```bash
-cd openrouter-relay
+cd openrouter-proxy
 npm install
 npm start
 ```
