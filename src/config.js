@@ -34,4 +34,6 @@ export const config = {
   enableLatencyTracking: process.env.ENABLE_LATENCY_TRACKING !== 'false',
   /** 代理请求到 OpenRouter 时使用的 HTTP(S) 代理，例如 http://127.0.0.1:7890 */
   httpProxy: process.env.HTTP_PROXY || process.env.http_proxy || '',
+  /** 单模型最大响应时间（毫秒），超时则自动切换模型重试，默认 1000 */
+  modelTimeoutMs: Number(process.env.MODEL_TIMEOUT_MS) || 1000,
 };

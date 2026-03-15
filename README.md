@@ -9,6 +9,7 @@
 - **OpenRouter 兼容**：接口与 OpenRouter 一致，`baseURL` 指向本服务即可（如 OpenClaw、OpenAI SDK）。
 - **流式与非流式**：均支持。
 - **可选 HTTP 代理**：若本机无法直连 OpenRouter，可配置 `HTTP_PROXY` 走代理（需安装 `undici`）。
+- **超时切换**：单模型响应超过 1s（可配置）即视为超时，自动模式会切换下一个模型重试。
 
 ## 环境要求
 
@@ -26,6 +27,7 @@
 | `AUTO_MODEL_ID` | “自动按速度切换”时请求里使用的模型名，默认 `openrouter/auto`。 |
 | `OPENROUTER_FREE_MODELS` | 参与自动切换的免费模型 ID，逗号分隔。不填则使用内置列表。 |
 | `ENABLE_LATENCY_TRACKING` | 是否记录延迟并用于自动选模型，默认 `true`。设为 `false` 则自动模式仅轮询列表第一个。 |
+| `MODEL_TIMEOUT_MS` | 单模型最大响应时间（毫秒），超时则自动切换下一个模型重试，默认 `1000`。 |
 
 ## 安装与运行
 

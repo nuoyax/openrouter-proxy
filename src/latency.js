@@ -18,16 +18,19 @@ export function createLatencyTracker(maxSamples = DEFAULT_MAX_SAMPLES) {
   }
 
   /**
-   * 在候选模型列表中，选出近期平均延迟最低的模型；若无数据则返回列表第一个
+   * 在候选模型列表中，选出近期平均延迟最低的模型；可排除部分模型（如已超时的）
+   * @param {string[]} candidateModels
+   * @param {Set<string>} [exclude] 不参与选择的模型 ID
    */
-  function pickFastest(candidateModels) {
+  function pickFastest(candidateModels, exclude = new Set()) {
     if (!candidateModels?.length) return null;
+    const candidates = exclude.size ? candidateModels.filter((m) => !exclude.has(m)) : candidateModels;
+    if (!candidates.length) return null;
     let best = null;
     let bestAvg = Infinity;
-    for (const model of candidateModels) {
+    for (const model of candidates) {
       const samples = byModel.get(model);
       if (!samples?.length) {
-        // 无数据时优先返回第一个，避免总是选同一个
         if (best === null) best = model;
         continue;
       }
@@ -37,7 +40,7 @@ export function createLatencyTracker(maxSamples = DEFAULT_MAX_SAMPLES) {
         best = model;
       }
     }
-    return best ?? candidateModels[0];
+    return best ?? candidates[0];
   }
 
   return { record, pickFastest, byModel };
