@@ -6,11 +6,14 @@ import { config } from './config.js';
 const CACHE_MS = 60 * 60 * 1000; // 1 小时
 let cached = null;
 let cachedAt = 0;
+let fetchingPromise = null;
 
 function isFreePricing(pricing) {
   if (!pricing) return false;
   const p = Array.isArray(pricing) ? pricing[0] : pricing;
   if (!p) return false;
+  const hasField = p.prompt != null || p.prompt_token != null || p.completion != null || p.completion_token != null;
+  if (!hasField) return false;
   const prompt = Number(p.prompt ?? p.prompt_token ?? 0);
   const completion = Number(p.completion ?? p.completion_token ?? 0);
   return prompt === 0 && completion === 0;
@@ -78,14 +81,22 @@ export async function getFreeModels() {
     return cached;
   }
 
-  const list = await fetchOpenRouterFreeModels();
-  if (list && list.length) {
-    cached = list;
-    cachedAt = now;
-    return list;
+  if (!fetchingPromise) {
+    fetchingPromise = fetchOpenRouterFreeModels()
+      .then((list) => {
+        if (list && list.length) {
+          cached = list;
+          cachedAt = Date.now();
+          return list;
+        }
+        return null;
+      })
+      .catch(() => null)
+      .finally(() => { fetchingPromise = null; });
   }
 
-  return config.freeModels;
+  const list = await fetchingPromise;
+  return list ?? config.freeModels;
 }
 
 /**

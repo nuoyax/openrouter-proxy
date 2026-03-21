@@ -140,6 +140,21 @@ server.listen(config.port, async () => {
   }
 });
 
+function shutdown(signal) {
+  console.log(`\n收到 ${signal}，正在关闭服务...`);
+  server.close(() => {
+    console.log('服务已关闭');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error('强制关闭');
+    process.exit(1);
+  }, 5000);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
 process.on('uncaughtException', (err) => {
   console.error('[uncaughtException]', err?.message || err);
 });

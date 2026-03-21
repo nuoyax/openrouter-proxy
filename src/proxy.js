@@ -5,7 +5,7 @@ import { config } from './config.js';
 import { createLatencyTracker } from './latency.js';
 import { getFreeModels } from './freeModels.js';
 
-const latencyTracker = config.enableLatencyTracking ? createLatencyTracker() : null;
+const latencyTracker = config.enableLatencyTracking ? createLatencyTracker(20, config.modelTimeoutMs / 2) : null;
 
 async function getFetchOptions() {
   const opts = { fetch: globalThis.fetch };
@@ -48,16 +48,23 @@ const TIMEOUT_LATENCY_MS = 60000; // 超时记为 60s，便于自动切换时避
  * 当配置了代理时使用 undici.fetch + dispatcher，确保走代理
  */
 async function fetchWithTimeout(url, resolved, headers, opts) {
-  const signal = AbortSignal.timeout(config.modelTimeoutMs);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), config.modelTimeoutMs);
   const doFetch = opts.fetch || globalThis.fetch;
-  const res = await doFetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(resolved),
-    signal,
-    dispatcher: opts.dispatcher,
-  });
-  return res;
+  try {
+    const res = await doFetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(resolved),
+      signal: controller.signal,
+      dispatcher: opts.dispatcher,
+    });
+    clearTimeout(timer);
+    return res;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
 }
 
 /**
@@ -135,7 +142,7 @@ export async function forwardToOpenRouter(req, body, pathname) {
     }
 
     const contentType = res.headers.get('content-type') || '';
-    const isStream = contentType.includes('text/event-stream') || res.headers.get('transfer-encoding') === 'chunked';
+    const isStream = contentType.includes('text/event-stream');
 
     if (isStream) {
       return { status: res.status, stream: res.body, headers: Object.fromEntries(res.headers) };

@@ -3,7 +3,7 @@
  */
 const DEFAULT_MAX_SAMPLES = 20;
 
-export function createLatencyTracker(maxSamples = DEFAULT_MAX_SAMPLES) {
+export function createLatencyTracker(maxSamples = DEFAULT_MAX_SAMPLES, defaultLatency = 3000) {
   const byModel = new Map(); // modelId -> number[]
 
   function record(modelId, latencyMs) {
@@ -31,7 +31,10 @@ export function createLatencyTracker(maxSamples = DEFAULT_MAX_SAMPLES) {
     for (const model of candidates) {
       const samples = byModel.get(model);
       if (!samples?.length) {
-        if (best === null) best = model;
+        if (defaultLatency < bestAvg) {
+          bestAvg = defaultLatency;
+          best = model;
+        }
         continue;
       }
       const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
