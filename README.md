@@ -12,9 +12,9 @@
 
 [OpenRouter](https://openrouter.ai/) 提供统一 API 与大量免费模型，但直连有时不稳定或受网络限制；OpenClaw、各类 SDK 又通常只认一个 Base URL。本仓库是一个 **轻量级代理服务**：部署在你本机或服务器后，所有请求先到本服务，再由本服务（可选经 HTTP 代理）访问 OpenRouter，对你现有的客户端来说只是换了一个 Base URL。
 
-- **指定模型**：请求里写具体模型 ID（如 `openrouter/free`），原样转发。  
-- **按速度自动切换**：写 `openrouter/auto`，本服务会从免费模型里按近期延迟自动选最快的，单模型超时则换下一个。  
-- **支持代理**：可配置 `HTTP_PROXY`，由本服务统一走代理，客户端无需改代码。  
+- **指定模型**：请求里写具体模型 ID（如 `openrouter/free`），原样转发。
+- **按速度自动切换**：写 `openrouter/auto`，本服务会从免费模型里按近期延迟自动选最快的，单模型超时则换下一个。
+- **支持代理**：可配置 `HTTP_PROXY`，由本服务统一走代理，客户端无需改代码。
 - **即插即用**：与 OpenRouter 接口兼容，OpenClaw、OpenAI SDK、curl 等把 Base URL 指到本服务即可。
 
 适合在本机或内网跑 OpenClaw / 自建应用，想用 OpenRouter 免费模型、又希望稳定可用的场景。
@@ -23,19 +23,23 @@
 
 </div>
 
+> **部署建议**
+> 若你与 OpenRouter 之间延迟高、易超时或流式不稳定，**推荐将本服务部署在亚洲地区**（如新加坡、东京、香港、首尔、孟买等机房）作为**就近中转**：你的客户端（本机 OpenClaw、内网应用等）只连到该区域上的本代理，再由该节点访问 OpenRouter，通常能缩短首包时间、减少链路抖动。可与本机或同区域的 `HTTP_PROXY` 组合使用。
+
 ---
 
 ## ✨ 功能
 
-| 能力 | 说明 |
-|------|------|
-| 🎯 **指定模型** | 请求体 `model` 填具体 ID（如 `openrouter/free`），直接转发。 |
-| ⚡ **按速度自动切换** | `model` 填 `openrouter/auto`，从免费模型中按近期延迟选最快的。 |
-| 🔌 **OpenRouter 兼容** | 接口一致，`baseURL` 指向本服务即可（OpenClaw、OpenAI SDK 等）。 |
-| 📡 **流式 / 非流式** | 均支持。 |
-| 🌐 **可选 HTTP 代理** | 配置 `HTTP_PROXY` 经代理访问 OpenRouter；走代理时默认超时 10s。 |
-| ⏱️ **超时自动切换** | 单模型超时即换下一个；直连默认 1s，走代理默认 10s，可配置。 |
-| 📋 **最新免费模型列表** | 未配置列表时从 OpenRouter API 拉取并缓存 1 小时，避免 404。 |
+
+| 能力                   | 说明                                                            |
+| ---------------------- | --------------------------------------------------------------- |
+| 🎯**指定模型**         | 请求体`model` 填具体 ID（如 `openrouter/free`），直接转发。     |
+| ⚡**按速度自动切换**   | `model` 填 `openrouter/auto`，从免费模型中按近期延迟选最快的。  |
+| 🔌**OpenRouter 兼容**  | 接口一致，`baseURL` 指向本服务即可（OpenClaw、OpenAI SDK 等）。 |
+| 📡**流式 / 非流式**    | 均支持。                                                        |
+| 🌐**可选 HTTP 代理**   | 配置`HTTP_PROXY` 经代理访问 OpenRouter；走代理时默认超时 10s。  |
+| ⏱️**超时自动切换**   | 单模型超时即换下一个；直连默认 1s，走代理默认 10s，可配置。     |
+| 📋**最新免费模型列表** | 未配置列表时从 OpenRouter API 拉取并缓存 1 小时，避免 404。     |
 
 ---
 
@@ -63,16 +67,17 @@ npm run dev
 
 复制 `.env.example` 为 `.env`，在本地填写（`.env` 已加入 `.gitignore`，不会提交）：
 
-| 变量 | 说明 |
-|------|------|
-| `OPENROUTER_API_KEY` | **必填**。在 [OpenRouter Keys](https://openrouter.ai/keys) 申请。 |
-| `PORT` | 监听端口，默认 `10300`。 |
-| `HTTP_PROXY` | **可选**。代理地址，须带协议如 `http://127.0.0.1:7890`；走代理时默认超时 10s。 |
-| `AUTO_MODEL_ID` | 自动切换时使用的模型名，默认 `openrouter/auto`。 |
-| `OPENROUTER_FREE_MODELS` | 参与自动切换的免费模型 ID，逗号分隔；不填则从 API 拉取（推荐）。 |
-| `FETCH_FREE_MODELS_FROM_OPENROUTER` | 是否从 API 拉取免费模型列表，默认 `true`。 |
-| `ENABLE_LATENCY_TRACKING` | 是否记录延迟用于自动选模型，默认 `true`。 |
-| `MODEL_TIMEOUT_MS` | 单模型最大响应时间（毫秒）；直连默认 `1000`，有代理时默认 `10000`。 |
+
+| 变量                                | 说明                                                                           |
+| ----------------------------------- | ------------------------------------------------------------------------------ |
+| `OPENROUTER_API_KEY`                | **必填**。在 [OpenRouter Keys](https://openrouter.ai/keys) 申请。              |
+| `PORT`                              | 监听端口，默认`10300`。                                                        |
+| `HTTP_PROXY`                        | **可选**。代理地址，须带协议如 `http://127.0.0.1:7890`；走代理时默认超时 10s。 |
+| `AUTO_MODEL_ID`                     | 自动切换时使用的模型名，默认`openrouter/auto`。                                |
+| `OPENROUTER_FREE_MODELS`            | 参与自动切换的免费模型 ID，逗号分隔；不填则从 API 拉取（推荐）。               |
+| `FETCH_FREE_MODELS_FROM_OPENROUTER` | 是否从 API 拉取免费模型列表，默认`true`。                                      |
+| `ENABLE_LATENCY_TRACKING`           | 是否记录延迟用于自动选模型，默认`true`。                                       |
+| `MODEL_TIMEOUT_MS`                  | 单模型最大响应时间（毫秒）；直连默认`1000`，有代理时默认 `10000`。             |
 
 ---
 
@@ -102,10 +107,11 @@ curl -X POST http://localhost:10300/api/v1/chat/completions \
 
 本服务提供两种用法，与 OpenClaw 的配置一一对应，保证行为一致：
 
-| 本服务能力 | 请求体 `model` 值 | OpenClaw 中 `primary` 填法（provider 名为 `orproxy` 时） |
-|------------|-------------------|----------------------------------------------------------|
-| **切换模型**（按延迟自动选免费模型，超时换下一个） | `openrouter/auto` | `orproxy/openrouter/auto` |
-| **指定模型**（固定用某个模型，原样转发） | `openrouter/free` 或任意 OpenRouter 模型 ID | `orproxy/openrouter/free`、`orproxy/stepfun/step-3.5-flash:free` 等 |
+
+| 本服务能力                                         | 请求体`model` 值                            | OpenClaw 中`primary` 填法（provider 名为 `orproxy` 时）             |
+| -------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| **切换模型**（按延迟自动选免费模型，超时换下一个） | `openrouter/auto`                           | `orproxy/openrouter/auto`                                           |
+| **指定模型**（固定用某个模型，原样转发）           | `openrouter/free` 或任意 OpenRouter 模型 ID | `orproxy/openrouter/free`、`orproxy/stepfun/step-3.5-flash:free` 等 |
 
 OpenClaw 发 **POST** 到 chat completions；本服务提供 `POST /v1/chat/completions` 与 `POST /api/v1/chat/completions`，只需让 OpenClaw 的请求发到本服务即可。
 
@@ -223,7 +229,7 @@ openclaw onboard --auth-choice apiKey --token-provider openrouter --token "sk-pl
 
 ## 📡 接口说明
 
-- **POST** `/api/v1/chat/completions` 或 `/v1/chat/completions`  
+- **POST** `/api/v1/chat/completions` 或 `/v1/chat/completions`
   与 OpenRouter chat completions 一致，请求体、流式与非流式均兼容。
 - 其他路径返回 404。
 
